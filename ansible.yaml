@@ -1,0 +1,8 @@
+---
+- hosts: all
+  become: yes
+
+  tasks:
+
+    - import_playbook: brave.yaml
+    - import_playbook: packages.yml

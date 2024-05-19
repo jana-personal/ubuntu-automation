@@ -1,0 +1,81 @@
+---
+- hosts: all
+  become: yes
+
+  vars:
+    packages:
+      - apache2
+      - mysql-server
+      - php
+      - python3
+      - git
+      - unzip
+      - zsh
+      - vim
+      - terminator
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg-agent
+      - software-properties-common
+      - code
+    aws_vault_version: "7.2.0"
+
+  tasks:
+
+    - name: Install packages
+      apt:
+        name: "{{ packages }}"
+        state: present
+        update_cache: yes
+
+    - name: Download AWS Vault binary
+      get_url:
+        url: "https://github.com/99designs/aws-vault/releases/download/v{{ aws_vault_version }}/aws-vault-linux-arm64"
+        dest: "/usr/local/bin/aws-vault"
+        mode: 0755
+
+    - name: Download AWS Vault SHA256 checksum
+      get_url:
+        url: "https://github.com/99designs/aws-vault/releases/download/v{{ aws_vault_version }}/SHA256SUMS"
+        dest: "/tmp/aws-vault-sha256sum.txt"
+
+    - name: Validate AWS Vault binary
+      sha256sum:
+        path: "/usr/local/bin/aws-vault"
+        checksum_file: "/tmp/aws-vault-sha256sum.txt"
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: deb [arch=arm64] https://download.docker.com/linux/ubuntu focal stable
+        state: present
+
+    - name: Install Docker
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+        update_cache: yes
+
+    - name: Install PyCharm Community Edition
+      snap:
+        name: pycharm-community
+        classic: true
+        state: present
+
+    - name: Install Oh-My-Zsh
+      shell: sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+
+    - name: Get installed packages
+      shell: dpkg --get-selections | grep -v deinstall
+      register: installed_packages
+
+    - debug:
+        msg: "Installed packages: \n{{ installed_packages.stdout_lines }}"
